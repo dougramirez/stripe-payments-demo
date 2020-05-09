@@ -151,38 +151,48 @@
 
   // Callback when a payment method is created.
   paymentRequest.on('paymentmethod', async event => {
-    // Confirm the PaymentIntent with the payment method returned from the payment request.
-    const {error} = await stripe.confirmCardPayment(
-      paymentIntent.client_secret,
-      {
-        payment_method: event.paymentMethod.id,
-        shipping: {
-          name: event.shippingAddress.recipient,
-          phone: event.shippingAddress.phone,
-          address: {
-            line1: event.shippingAddress.addressLine[0],
-            city: event.shippingAddress.city,
-            postal_code: event.shippingAddress.postalCode,
-            state: event.shippingAddress.region,
-            country: event.shippingAddress.country,
+    if (config.serverSideIntentConfirm == 'true') {
+      const response = await store.confirmPaymentIntent(
+        paymentIntent,
+        event.paymentMethod.id
+      );
+      event.complete('success');
+      return;
+    }
+    else {
+      // Confirm the PaymentIntent with the payment method returned from the payment request.
+      const {error} = await stripe.confirmCardPayment(
+        paymentIntent.client_secret,
+        {
+          payment_method: event.paymentMethod.id,
+          shipping: {
+            name: event.shippingAddress.recipient,
+            phone: event.shippingAddress.phone,
+            address: {
+              line1: event.shippingAddress.addressLine[0],
+              city: event.shippingAddress.city,
+              postal_code: event.shippingAddress.postalCode,
+              state: event.shippingAddress.region,
+              country: event.shippingAddress.country,
+            },
           },
         },
-      },
-      {handleActions: false}
-    );
-    if (error) {
-      // Report to the browser that the payment failed.
-      event.complete('fail');
-      handlePayment({error});
-    } else {
-      // Report to the browser that the confirmation was successful, prompting
-      // it to close the browser payment method collection interface.
-      event.complete('success');
-      // Let Stripe.js handle the rest of the payment flow, including 3D Secure if needed.
-      const response = await stripe.confirmCardPayment(
-        paymentIntent.client_secret
+        {handleActions: false}
       );
-      handlePayment(response);
+      if (error) {
+        // Report to the browser that the payment failed.
+        event.complete('fail');
+        handlePayment({error});
+      } else {
+        // Report to the browser that the confirmation was successful, prompting
+        // it to close the browser payment method collection interface.
+        event.complete('success');
+        // Let Stripe.js handle the rest of the payment flow, including 3D Secure if needed.
+        const response = await stripe.confirmCardPayment(
+          paymentIntent.client_secret
+        );
+        handlePayment(response);
+      }
     }
   });
 
@@ -555,7 +565,11 @@
     // Create the PaymentIntent with the cart details.
     const response = await store.createPaymentIntent(
       config.currency,
-      store.getLineItems()
+      store.getLineItems(),
+      {
+        'client': 'metadata', 
+        'serverSideIntentConfirm ': config.serverSideIntentConfirm
+      },
     );
     paymentIntent = response.paymentIntent;
   }

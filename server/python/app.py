@@ -73,7 +73,8 @@ def get_config():
             'detail': 'Next day delivery',
             'amount': 500,
         }
-        ]
+        ],
+        "serverSideIntentConfirm": os.getenv("SERVER_SIDE_INTENT_CONFIRM")
     })
 
 
@@ -98,13 +99,16 @@ def retrieve_product(product_id):
 def make_payment_intent():
     # Creates a new PaymentIntent with items from the cart.
     data = json.loads(request.data)
+    metadata=data['metadata']
+    metadata.update({'server': 'metadata'})
     try:
         payment_intent = stripe.PaymentIntent.create(
             amount=Inventory.calculate_payment_amount(items=data['items']),
             currency=data['currency'],
             payment_method_types=os.getenv(
                 'PAYMENT_METHODS').split(', ') if os.getenv(
-                'PAYMENT_METHODS') else ['card']
+                'PAYMENT_METHODS') else ['card'],
+            metadata=metadata,
         )
 
         return jsonify({'paymentIntent': payment_intent})
@@ -125,6 +129,21 @@ def update_payment_intent(id):
 
         return jsonify({'paymentIntent': payment_intent})
     except Exception as e:
+        return jsonify(e), 403
+
+
+@app.route("/payment_intents/<string:id>/confirm", methods=["POST"])
+def confirm_payment_intent(id):
+    data = json.loads(request.data)
+    payment_method_id = data["paymentMethodId"]
+    try:
+        payment_intent = stripe.PaymentIntent.confirm(
+            id, payment_method=payment_method_id
+        )
+
+        return jsonify({"paymentIntent": payment_intent})
+    except Exception as e:
+        app.logger.error(jsonify(e))
         return jsonify(e), 403
 
 

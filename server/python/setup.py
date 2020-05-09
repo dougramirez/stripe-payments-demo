@@ -14,7 +14,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-stripe.api_version = '2019-03-14'
+stripe.api_version = '2020-03-02'
 
 
 def create_data():

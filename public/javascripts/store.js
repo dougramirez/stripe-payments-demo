@@ -90,7 +90,7 @@ class Store {
   }
 
   // Create the PaymentIntent with the cart details.
-  async createPaymentIntent(currency, items) {
+  async createPaymentIntent(currency, items, metadata) {
     try {
       const response = await fetch('/payment_intents', {
         method: 'POST',
@@ -98,6 +98,7 @@ class Store {
         body: JSON.stringify({
           currency,
           items,
+          metadata,
         }),
       });
       const data = await response.json();
@@ -137,6 +138,31 @@ class Store {
       }
     } catch (err) {
       return {error: err.message};
+    }
+  }
+
+  // Confirm the PaymentIntent with the cart details.
+  async confirmPaymentIntent(paymentIntent, paymentMethodId) {
+    try {
+      const response = await fetch(
+        `payment_intents/${paymentIntent.id}/confirm`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentIntent,
+            paymentMethodId,
+          }),
+        }
+      );
+      const data = await response.json();
+      if (data.error) {
+        return { error: data.error };
+      } else {
+        return data;
+      }
+    } catch (err) {
+      return { error: err.message };
     }
   }
 
