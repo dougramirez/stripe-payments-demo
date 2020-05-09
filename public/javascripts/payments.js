@@ -151,6 +151,11 @@
 
   // Callback when a payment method is created.
   paymentRequest.on('paymentmethod', async event => {
+    console.debug(config.serverSideIntentConfirm)
+    if (config.serverSideIntentConfirm == true) {
+      const i = 1;
+    }
+    else {
     // Confirm the PaymentIntent with the payment method returned from the payment request.
     const {error} = await stripe.confirmCardPayment(
       paymentIntent.client_secret,
